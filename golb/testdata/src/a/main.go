@@ -13,5 +13,9 @@ func main() {
 
 	fmt.Println(v3.X, v3.Y)
 	fmt.Println(lib.Min(1, 2))
-	fmt.Println(lib.Max(1, 2))
+	hello()
+}
+
+func hello() {
+	fmt.Println("hello")
 }
