@@ -15,7 +15,7 @@ var rootCmd = &cobra.Command{
 	Short: "",
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
-		golb.Hello()
+		golb.Bundle("golb/testdata/src/a/main.go")
 	},
 }
 
