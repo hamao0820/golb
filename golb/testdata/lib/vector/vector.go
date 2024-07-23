@@ -1,4 +1,4 @@
-package lib
+package vector
 
 type Vector struct {
 	X, Y int
