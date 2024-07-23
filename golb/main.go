@@ -16,7 +16,7 @@ func Bundle(src string) error {
 	if err != nil {
 		return err
 	}
-	findUsedElements(srcNode)
+	fmt.Println(getImportedLibs(srcNode))
 
 	return nil
 }
@@ -29,6 +29,20 @@ func perseFile(filename string) (*ast.File, error) {
 	}
 
 	return node, nil
+}
+
+func getImportedLibs(file *ast.File) map[string]string {
+	libs := make(map[string]string)
+
+	for _, imp := range file.Imports {
+		if imp.Name != nil {
+			libs[imp.Path.Value] = imp.Name.Name
+			continue
+		}
+		libs[imp.Path.Value] = ""
+	}
+
+	return libs
 }
 
 func findUsedElements(file *ast.File) (nodes []ast.Node) {

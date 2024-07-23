@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"golb/golb/testdata/lib/util"
-	"golb/golb/testdata/lib/vector"
+	vector "golb/golb/testdata/lib/vector"
 )
 
 func main() {
