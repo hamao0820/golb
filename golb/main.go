@@ -26,14 +26,14 @@ type Library struct {
 type Bundler struct {
 	src        string
 	libPackage string
-	goModDir   string
+	rootDir    string
 }
 
 func NewBundler(src, libPackage, goModDir string) Bundler {
 	return Bundler{
 		src:        src,
 		libPackage: libPackage,
-		goModDir:   goModDir,
+		rootDir:    goModDir,
 	}
 }
 
@@ -80,7 +80,7 @@ func (b Bundler) Bundle() error {
 	dfs(b.src)
 
 	sourceCode := files[b.src]
-	sourceCode += "//========================================"
+	sourceCode += "/*" + strings.Repeat("-", 50) + "以下は生成コード" + strings.Repeat("-", 50) + "*/"
 	sourceCode += "\n\n"
 	for file, code := range files {
 		if file == b.src {
@@ -153,7 +153,7 @@ func (b Bundler) isLibrary(value string) bool {
 // ライブラリのディレクトリを取得
 // "golb/golb/testdata/lib/sample" -> "golb/testdata/lib/sample"
 func (b Bundler) getDir(value string) string {
-	return path.Join(b.goModDir, strings.TrimPrefix(strings.Trim(value, "\""), b.libPackage))
+	return path.Join(b.rootDir, strings.TrimPrefix(strings.Trim(value, "\""), b.libPackage))
 }
 
 // ディレクトリ内のファイルを取得
