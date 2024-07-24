@@ -14,8 +14,9 @@ var rootCmd = &cobra.Command{
 	Use:   "golb",
 	Short: "",
 	Long:  "",
-	Run: func(cmd *cobra.Command, args []string) {
-		golb.Bundle("golb/testdata/src/a/main.go")
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := golb.Bundle("golb/testdata/src/a/main.go")
+		return err
 	},
 }
 

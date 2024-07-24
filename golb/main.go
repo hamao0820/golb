@@ -7,6 +7,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
 	"path"
 	"strings"
 )
@@ -17,14 +18,29 @@ type Library struct {
 	Alias        string
 }
 
-const libDir = "golb/golb/testdata/lib"
+const libPackage = "github.com/hamao0820/ac-library-go"
+
+var goModDir = path.Join("golb", "testdata")
 
 func Bundle(src string) error {
 	srcNode, err := perseFile(src)
 	if err != nil {
 		return err
 	}
-	fmt.Println(getImportedPackage(srcNode))
+	libs := getImportedPackage(srcNode)
+
+	files := map[string]struct{}{}
+	for _, lib := range libs {
+		libDir := getDir(lib.ImportPath)
+		libFiles := getFiles(libDir)
+		for _, file := range libFiles {
+			files[path.Join(libDir,file.Name())] = struct{}{}
+		}
+	}
+
+	for file := range files {
+		fmt.Println(file)
+	}
 
 	return nil
 }
@@ -70,7 +86,23 @@ func getImportedPackage(file *ast.File) []Library {
 }
 
 func isLibrary(value string) bool {
-	return strings.Contains(value, libDir)
+	return strings.Contains(value, libPackage)
+}
+
+// ライブラリのディレクトリを取得
+// "golb/golb/testdata/lib/sample" -> "golb/testdata/lib/sample"
+func getDir(value string) string {
+	return path.Join(goModDir, strings.TrimPrefix(strings.Trim(value, "\""), libPackage))
+}
+
+// ディレクトリ内のファイルを取得
+func getFiles(dir string) []os.DirEntry {
+	f, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+
+	return f
 }
 
 func prettyPrint(v any) error {
