@@ -24,6 +24,7 @@ var goModDir = path.Join("golb", "testdata")
 
 func Bundle(src string) error {
 	files := map[string]struct{}{}
+	var libs []Library
 
 	// 再帰的にファイルを取得
 	var dfs func(string)
@@ -36,9 +37,13 @@ func Bundle(src string) error {
 		if err != nil {
 			return
 		}
-		libs := getImportedPackage(node)
+		importLibs := getImportedPackage(node)
 
-		for _, lib := range libs {
+		if file == src {
+			libs = importLibs
+		}
+
+		for _, lib := range importLibs {
 			libDir := getDir(lib.ImportPath)
 			libFiles := getFiles(libDir)
 			for _, file := range libFiles {
@@ -53,6 +58,7 @@ func Bundle(src string) error {
 	for file := range files {
 		fmt.Println(file)
 	}
+	fmt.Println(libs)
 
 	return nil
 }
