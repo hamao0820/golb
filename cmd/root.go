@@ -4,10 +4,13 @@ Copyright © 2024 hamao
 package cmd
 
 import (
+	"errors"
 	"golb/golb"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -20,11 +23,37 @@ var output string
 var libPackage string
 var rootDir string
 
+func init() {
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	configFilePath = filepath.Join(homedir, ".golb", "config.json")
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "golb",
 	Short: "",
 	Long:  "",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		viper.SetConfigFile(configFilePath)
+		viper.SetConfigType("json")
+		if err := viper.ReadInConfig(); err != nil {
+			return err
+		}
+
+		if viper.Get("libPackage") != nil {
+			libPackage = viper.Get("libPackage").(string)
+		}
+
+		if viper.Get("rootDir") != nil {
+			rootDir = viper.Get("rootDir").(string)
+		}
+
+		if libPackage == "" || rootDir == "" {
+			return errors.New("libPackage and rootDir are required")
+		}
+
 		b := golb.NewBundler(input, libPackage, rootDir)
 		code, err := b.Bundle()
 		if err != nil {

@@ -5,22 +5,12 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var configFilePath string
-
-func init() {
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		panic(err)
-	}
-	configFilePath = filepath.Join(homedir, ".golb", "config.json")
-}
 
 // configCmd represents the config command
 var configCmd = &cobra.Command{
