@@ -95,7 +95,7 @@ func getImportedPackage(file *ast.File) []Library {
 
 		libs = append(libs, Library{
 			ImportPath:   imp.Path.Value,
-			SelectorName: path.Base(imp.Path.Value),
+			SelectorName: path.Base(strings.ReplaceAll(imp.Path.Value, "\"", "")),
 			Alias:        "",
 		})
 	}
