@@ -23,21 +23,33 @@ const libPackage = "github.com/hamao0820/ac-library-go"
 var goModDir = path.Join("golb", "testdata")
 
 func Bundle(src string) error {
-	srcNode, err := perseFile(src)
-	if err != nil {
-		return err
-	}
-	libs := getImportedPackage(srcNode)
-
 	files := map[string]struct{}{}
-	for _, lib := range libs {
-		libDir := getDir(lib.ImportPath)
-		libFiles := getFiles(libDir)
-		for _, file := range libFiles {
-			files[path.Join(libDir,file.Name())] = struct{}{}
+
+	// 再帰的にファイルを取得
+	var dfs func(string)
+	dfs = func(file string) {
+		if _, ok := files[file]; ok {
+			return
+		}
+
+		node, err := perseFile(file)
+		if err != nil {
+			return
+		}
+		libs := getImportedPackage(node)
+
+		for _, lib := range libs {
+			libDir := getDir(lib.ImportPath)
+			libFiles := getFiles(libDir)
+			for _, file := range libFiles {
+				libPath := path.Join(libDir, file.Name())
+				dfs(libPath)
+				files[libPath] = struct{}{}
+			}
 		}
 	}
 
+	dfs(src)
 	for file := range files {
 		fmt.Println(file)
 	}

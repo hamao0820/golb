@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/hamao0820/ac-library-go/lib/sample"
-	"github.com/hamao0820/ac-library-go/lib/util"
 	vc "github.com/hamao0820/ac-library-go/lib/vector"
 )
 
@@ -15,7 +14,6 @@ func main() {
 	v3.Scale(2)
 
 	fmt.Println(v3.X, v3.Y)
-	fmt.Println(util.Min(1, 2))
 	fmt.Println(sample.Sample(1, 2))
 	hello()
 }
