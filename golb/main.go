@@ -37,7 +37,7 @@ func NewBundler(src, libPackage, goModDir string) Bundler {
 	}
 }
 
-func (b Bundler) Bundle() error {
+func (b Bundler) Bundle() (code string, err error) {
 	files := map[string]string{} // key: file path, value: 展開コード
 
 	// 再帰的にファイルを取得
@@ -94,16 +94,15 @@ func (b Bundler) Bundle() error {
 
 	formatted, err := imports.Process("", []byte(sourceCode), nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	formatted, err = format.Source(formatted)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	fmt.Println(string(formatted))
-	return nil
+	return string(formatted), nil
 }
 
 // ASTを取得
