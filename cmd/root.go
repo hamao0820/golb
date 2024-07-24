@@ -10,6 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type Config struct {
+	LibPackage string `json:"libPackage"`
+	RootDir    string `json:"rootDir"`
+}
+
 var input string
 var output string
 var libPackage string
@@ -43,12 +48,12 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&input, "input", "i", "", "target source file")
-	rootCmd.MarkPersistentFlagRequired("src")
-	rootCmd.PersistentFlags().StringVarP(&output, "output", "o", "", "output file")
-	rootCmd.MarkPersistentFlagRequired("output")
-	rootCmd.PersistentFlags().StringVarP(&libPackage, "lib", "l", "github.com/hamao0820/ac-library-go", "target library package")
-	rootCmd.PersistentFlags().StringVarP(&rootDir, "root", "r", "golb/testdata", "root directory")
+	rootCmd.Flags().StringVarP(&input, "input", "i", "", "target source file")
+	rootCmd.MarkFlagRequired("src")
+	rootCmd.Flags().StringVarP(&output, "output", "o", "", "output file")
+	rootCmd.MarkFlagRequired("output")
+	rootCmd.Flags().StringVarP(&libPackage, "lib", "l", "github.com/hamao0820/ac-library-go", "target library package")
+	rootCmd.Flags().StringVarP(&rootDir, "root", "r", "/Users/hamadashunsuke/Documents/atcoder/go.mod", "root directory")
 }
 
 func Execute() {
