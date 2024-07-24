@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/ast"
-	"go/format"
 	"go/parser"
+	"go/printer"
 	"go/token"
 	"os"
 	"path"
@@ -26,8 +26,8 @@ const libPackage = "github.com/hamao0820/ac-library-go"
 var goModDir = path.Join("golb", "testdata")
 
 func Bundle(src string) error {
-	files := map[string]struct{}{}
-	var libs []Library
+	files := map[string]string{} // key: file path, value: 展開コード
+	// var libs []Library
 
 	// 再帰的にファイルを取得
 	var dfs func(string)
@@ -35,16 +35,26 @@ func Bundle(src string) error {
 		if _, ok := files[file]; ok {
 			return
 		}
-
 		node, err := perseFile(file)
 		if err != nil {
 			return
 		}
-		importLibs := getImportedPackage(node)
 
-		if file == src {
-			libs = importLibs
+		importLibs := getImportedPackage(node)
+		targetSelectors := map[string]struct{}{}
+		targetImports := map[string]struct{}{}
+		for _, lib := range importLibs {
+			targetSelectors[lib.SelectorName] = struct{}{}
+			targetImports[lib.ImportPath] = struct{}{}
 		}
+
+		removeSelector(node, targetSelectors)
+		removeAllImport(node)
+		code := nodeToString(node)
+		if file != src {
+			code = strings.Join(strings.Split(code, "\n")[1:], "\n") // package行を削除
+		}
+		files[file] = code
 
 		for _, lib := range importLibs {
 			libDir := getDir(lib.ImportPath)
@@ -52,24 +62,17 @@ func Bundle(src string) error {
 			for _, file := range libFiles {
 				libPath := path.Join(libDir, file.Name())
 				dfs(libPath)
-				files[libPath] = struct{}{}
 			}
 		}
 	}
 
 	dfs(src)
-	targetSelectors := map[string]struct{}{}
-	for _, lib := range libs {
-		targetSelectors[lib.SelectorName] = struct{}{}
+
+	for file, code := range files {
+		fmt.Println(file)
+		fmt.Println("========================================")
+		fmt.Println(code)
 	}
-	ragetImports := map[string]struct{}{}
-	for _, lib := range libs {
-		ragetImports[lib.ImportPath] = struct{}{}
-	}
-	node, _ := perseFile(src)
-	removeSelector(node, targetSelectors)
-	removeImport(node, ragetImports)
-	format.Node(os.Stdout, token.NewFileSet(), node)
 
 	return nil
 }
@@ -161,6 +164,32 @@ func removeImport(file *ast.File, targets map[string]struct{}) {
 		}
 		return true
 	}, nil)
+}
+
+// ASTを書き換え
+// import宣言を削除する
+func removeAllImport(file *ast.File) {
+	// import宣言を削除
+	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
+		switch node := cursor.Node().(type) {
+		case *ast.GenDecl:
+			if node.Tok == token.IMPORT {
+				cursor.Delete()
+			}
+		}
+		return true
+	}, nil)
+}
+
+// ノードを文字列として取得する
+func nodeToString(node ast.Node) string {
+	var buf bytes.Buffer
+	err := printer.Fprint(&buf, token.NewFileSet(), node)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error printing node: %v\n", err)
+		return ""
+	}
+	return buf.String()
 }
 
 func prettyPrint(v any) error {
