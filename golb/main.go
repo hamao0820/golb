@@ -62,8 +62,13 @@ func Bundle(src string) error {
 	for _, lib := range libs {
 		targetSelectors[lib.SelectorName] = struct{}{}
 	}
+	ragetImports := map[string]struct{}{}
+	for _, lib := range libs {
+		ragetImports[lib.ImportPath] = struct{}{}
+	}
 	node, _ := perseFile(src)
 	removeSelector(node, targetSelectors)
+	removeImport(node, ragetImports)
 	format.Node(os.Stdout, token.NewFileSet(), node)
 
 	return nil
@@ -138,6 +143,20 @@ func removeSelector(file *ast.File, targets map[string]struct{}) {
 		case *ast.SelectorExpr:
 			if _, ok := targets[node.X.(*ast.Ident).Name]; ok {
 				cursor.Replace(node.Sel)
+			}
+		}
+		return true
+	}, nil)
+}
+
+// ASTを書き換え
+// targetに含まれるimportを削除する
+func removeImport(file *ast.File, targets map[string]struct{}) {
+	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
+		switch node := cursor.Node().(type) {
+		case *ast.ImportSpec:
+			if _, ok := targets[node.Path.Value]; ok {
+				cursor.Delete()
 			}
 		}
 		return true
