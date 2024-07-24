@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/token"
 	"os"
 	"path"
 	"strings"
+
+	"golang.org/x/tools/go/ast/astutil"
 )
 
 type Library struct {
@@ -55,10 +58,13 @@ func Bundle(src string) error {
 	}
 
 	dfs(src)
-	for file := range files {
-		fmt.Println(file)
+	targetSelectors := map[string]struct{}{}
+	for _, lib := range libs {
+		targetSelectors[lib.SelectorName] = struct{}{}
 	}
-	fmt.Println(libs)
+	node, _ := perseFile(src)
+	removeSelector(node, targetSelectors)
+	format.Node(os.Stdout, token.NewFileSet(), node)
 
 	return nil
 }
@@ -121,6 +127,21 @@ func getFiles(dir string) []os.DirEntry {
 	}
 
 	return f
+}
+
+// ASTを書き換え
+// targetに含まれるselectorを削除する
+// vector.X -> X
+func removeSelector(file *ast.File, targets map[string]struct{}) {
+	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
+		switch node := cursor.Node().(type) {
+		case *ast.SelectorExpr:
+			if _, ok := targets[node.X.(*ast.Ident).Name]; ok {
+				cursor.Replace(node.Sel)
+			}
+		}
+		return true
+	}, nil)
 }
 
 func prettyPrint(v any) error {
