@@ -23,13 +23,22 @@ type Library struct {
 	Alias        string
 }
 
-const libPackage = "github.com/hamao0820/ac-library-go"
+type Bundler struct {
+	src        string
+	libPackage string
+	goModDir   string
+}
 
-var goModDir = path.Join("golb", "testdata")
+func NewBundler(src, libPackage, goModDir string) Bundler {
+	return Bundler{
+		src:        src,
+		libPackage: libPackage,
+		goModDir:   goModDir,
+	}
+}
 
-func Bundle(src string) error {
+func (b Bundler) Bundle() error {
 	files := map[string]string{} // key: file path, value: 展開コード
-	// var libs []Library
 
 	// 再帰的にファイルを取得
 	var dfs func(string)
@@ -37,12 +46,12 @@ func Bundle(src string) error {
 		if _, ok := files[file]; ok {
 			return
 		}
-		node, err := perseFile(file)
+		node, err := b.perseFile(file)
 		if err != nil {
 			return
 		}
 
-		importLibs := getImportedPackage(node)
+		importLibs := b.getImportedPackage(node)
 		targetSelectors := map[string]struct{}{}
 		targetImports := map[string]struct{}{}
 		for _, lib := range importLibs {
@@ -50,17 +59,17 @@ func Bundle(src string) error {
 			targetImports[lib.ImportPath] = struct{}{}
 		}
 
-		removeSelector(node, targetSelectors)
-		removeAllImport(node)
-		code := nodeToString(node)
-		if file != src {
+		b.removeSelector(node, targetSelectors)
+		b.removeAllImport(node)
+		code := b.nodeToString(node)
+		if file != b.src {
 			code = strings.Join(strings.Split(code, "\n")[1:], "\n") // package行を削除
 		}
 		files[file] = code
 
 		for _, lib := range importLibs {
-			libDir := getDir(lib.ImportPath)
-			libFiles := getFiles(libDir)
+			libDir := b.getDir(lib.ImportPath)
+			libFiles := b.getFiles(libDir)
 			for _, file := range libFiles {
 				libPath := path.Join(libDir, file.Name())
 				dfs(libPath)
@@ -68,13 +77,13 @@ func Bundle(src string) error {
 		}
 	}
 
-	dfs(src)
+	dfs(b.src)
 
-	sourceCode := files[src]
+	sourceCode := files[b.src]
 	sourceCode += "//========================================"
 	sourceCode += "\n\n"
 	for file, code := range files {
-		if file == src {
+		if file == b.src {
 			continue
 		}
 		dirs := strings.Split(file, "/")
@@ -98,7 +107,7 @@ func Bundle(src string) error {
 }
 
 // ASTを取得
-func perseFile(filename string) (*ast.File, error) {
+func (b Bundler) perseFile(filename string) (*ast.File, error) {
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 	if err != nil {
@@ -109,11 +118,11 @@ func perseFile(filename string) (*ast.File, error) {
 }
 
 // importされている自作ライブラリのパッケージを取得
-func getImportedPackage(file *ast.File) []Library {
+func (b Bundler) getImportedPackage(file *ast.File) []Library {
 	libs := []Library{}
 
 	for _, imp := range file.Imports {
-		if !isLibrary(imp.Path.Value) {
+		if !b.isLibrary(imp.Path.Value) {
 			continue
 		}
 
@@ -137,18 +146,18 @@ func getImportedPackage(file *ast.File) []Library {
 	return libs
 }
 
-func isLibrary(value string) bool {
-	return strings.Contains(value, libPackage)
+func (b Bundler) isLibrary(value string) bool {
+	return strings.Contains(value, b.libPackage)
 }
 
 // ライブラリのディレクトリを取得
 // "golb/golb/testdata/lib/sample" -> "golb/testdata/lib/sample"
-func getDir(value string) string {
-	return path.Join(goModDir, strings.TrimPrefix(strings.Trim(value, "\""), libPackage))
+func (b Bundler) getDir(value string) string {
+	return path.Join(b.goModDir, strings.TrimPrefix(strings.Trim(value, "\""), b.libPackage))
 }
 
 // ディレクトリ内のファイルを取得
-func getFiles(dir string) []os.DirEntry {
+func (b Bundler) getFiles(dir string) []os.DirEntry {
 	f, err := os.ReadDir(dir)
 	if err != nil {
 		return nil
@@ -160,7 +169,7 @@ func getFiles(dir string) []os.DirEntry {
 // ASTを書き換え
 // targetに含まれるselectorを削除する
 // vector.X -> X
-func removeSelector(file *ast.File, targets map[string]struct{}) {
+func (b Bundler) removeSelector(file *ast.File, targets map[string]struct{}) {
 	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
 		switch node := cursor.Node().(type) {
 		case *ast.SelectorExpr:
@@ -173,22 +182,8 @@ func removeSelector(file *ast.File, targets map[string]struct{}) {
 }
 
 // ASTを書き換え
-// targetに含まれるimportを削除する
-func removeImport(file *ast.File, targets map[string]struct{}) {
-	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
-		switch node := cursor.Node().(type) {
-		case *ast.ImportSpec:
-			if _, ok := targets[node.Path.Value]; ok {
-				cursor.Delete()
-			}
-		}
-		return true
-	}, nil)
-}
-
-// ASTを書き換え
 // import宣言を削除する
-func removeAllImport(file *ast.File) {
+func (b Bundler) removeAllImport(file *ast.File) {
 	// import宣言を削除
 	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
 		switch node := cursor.Node().(type) {
@@ -202,7 +197,7 @@ func removeAllImport(file *ast.File) {
 }
 
 // ノードを文字列として取得する
-func nodeToString(node ast.Node) string {
+func (b Bundler) nodeToString(node *ast.File) string {
 	var buf bytes.Buffer
 	err := printer.Fprint(&buf, token.NewFileSet(), node)
 	if err != nil {

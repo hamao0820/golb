@@ -15,7 +15,8 @@ var rootCmd = &cobra.Command{
 	Short: "",
 	Long:  "",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := golb.Bundle("golb/testdata/src/a/main.go")
+		b := golb.NewBundler("golb/testdata/src/a/main.go", "github.com/hamao0820/ac-library-go", "golb/testdata")
+		err := b.Bundle()
 		return err
 	},
 }
