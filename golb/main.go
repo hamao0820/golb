@@ -69,7 +69,10 @@ func (b Bundler) Bundle() (code string, err error) {
 
 		for _, lib := range importLibs {
 			libDir := b.getDir(lib.ImportPath)
-			libFiles := b.getFiles(libDir)
+			libFiles, err := b.getFiles(libDir)
+			if err != nil {
+				panic(err)
+			}
 			for _, file := range libFiles {
 				libPath := path.Join(libDir, file.Name())
 				dfs(libPath)
@@ -156,13 +159,13 @@ func (b Bundler) getDir(value string) string {
 }
 
 // ディレクトリ内のファイルを取得
-func (b Bundler) getFiles(dir string) []os.DirEntry {
+func (b Bundler) getFiles(dir string) ([]os.DirEntry, error) {
 	f, err := os.ReadDir(dir)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	return f
+	return f, nil
 }
 
 // ASTを書き換え
