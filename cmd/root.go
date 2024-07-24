@@ -52,8 +52,8 @@ func init() {
 	rootCmd.MarkFlagRequired("src")
 	rootCmd.Flags().StringVarP(&output, "output", "o", "", "output file")
 	rootCmd.MarkFlagRequired("output")
-	rootCmd.Flags().StringVarP(&libPackage, "lib", "l", "github.com/hamao0820/ac-library-go", "target library package")
-	rootCmd.Flags().StringVarP(&rootDir, "root", "r", "/Users/hamadashunsuke/Documents/atcoder/go.mod", "root directory")
+	rootCmd.Flags().StringVarP(&libPackage, "lib", "l", "", "target library package")
+	rootCmd.Flags().StringVarP(&rootDir, "root", "r", "", "root directory")
 }
 
 func Execute() {
