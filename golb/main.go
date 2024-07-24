@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/printer"
 	"go/token"
@@ -13,6 +14,7 @@ import (
 	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
+	"golang.org/x/tools/imports"
 )
 
 type Library struct {
@@ -76,13 +78,22 @@ func Bundle(src string) error {
 			continue
 		}
 		dirs := strings.Split(file, "/")
-		sourceCode += "// " + path.Join(dirs[len(dirs)-2:]...) + "\n"
+		sourceCode += "// " + path.Join(dirs[len(dirs)-2:]...)
 		sourceCode += code
 		sourceCode += "\n\n"
 	}
 
-	fmt.Println(sourceCode)
+	formatted, err := imports.Process("", []byte(sourceCode), nil)
+	if err != nil {
+		return err
+	}
 
+	formatted, err = format.Source(formatted)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(formatted))
 	return nil
 }
 
