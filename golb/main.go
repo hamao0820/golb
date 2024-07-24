@@ -68,11 +68,20 @@ func Bundle(src string) error {
 
 	dfs(src)
 
+	sourceCode := files[src]
+	sourceCode += "//========================================"
+	sourceCode += "\n\n"
 	for file, code := range files {
-		fmt.Println(file)
-		fmt.Println("========================================")
-		fmt.Println(code)
+		if file == src {
+			continue
+		}
+		dirs := strings.Split(file, "/")
+		sourceCode += "// " + path.Join(dirs[len(dirs)-2:]...) + "\n"
+		sourceCode += code
+		sourceCode += "\n\n"
 	}
+
+	fmt.Println(sourceCode)
 
 	return nil
 }
