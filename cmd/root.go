@@ -55,7 +55,11 @@ var rootCmd = &cobra.Command{
 		}
 
 		b := golb.NewBundler(libPackage, rootDir)
-		code, err := b.Bundle(input)
+		absPath, err := filepath.Abs(input)
+		if err != nil {
+			return err
+		}
+		code, err := b.Bundle(absPath)
 		if err != nil {
 			return err
 		}
