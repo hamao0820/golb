@@ -269,7 +269,6 @@ func (b Bundler) removeUnusedFunction(file *ast.File, usedFuncs map[string]struc
 			// methodは削除しない
 			// func (v Vector) Add(v2 Vector) Vector {}
 			if node.Recv != nil {
-				fmt.Println(node.Name.Name, node.Recv)
 				return true
 			}
 
