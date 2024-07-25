@@ -54,8 +54,8 @@ var rootCmd = &cobra.Command{
 			return errors.New("libPackage and rootDir are required")
 		}
 
-		b := golb.NewBundler(input, libPackage, rootDir)
-		code, err := b.Bundle()
+		b := golb.NewBundler(libPackage, rootDir)
+		code, err := b.Bundle(input)
 		if err != nil {
 			return err
 		}

@@ -24,20 +24,18 @@ type Library struct {
 }
 
 type Bundler struct {
-	src        string
 	libPackage string
 	rootDir    string
 }
 
-func NewBundler(src, libPackage, goModDir string) Bundler {
+func NewBundler(libPackage, goModDir string) Bundler {
 	return Bundler{
-		src:        src,
 		libPackage: libPackage,
 		rootDir:    goModDir,
 	}
 }
 
-func (b Bundler) Bundle() (code string, err error) {
+func (b Bundler) Bundle(src string) (code string, err error) {
 	codes := map[string]string{} // key: file path, value: 展開コード
 	usedFuncs := map[string]struct{}{}
 
@@ -98,7 +96,7 @@ func (b Bundler) Bundle() (code string, err error) {
 		b.removeAllImport(node)
 		b.removeUnusedFunction(node, usedFuncs)
 		code := b.nodeToString(node)
-		if file != b.src {
+		if file != src {
 			code = strings.Join(strings.Split(code, "\n")[1:], "\n") // package行を削除
 		}
 		codes[file] = code
@@ -116,15 +114,15 @@ func (b Bundler) Bundle() (code string, err error) {
 		}
 	}
 
-	dfs(b.src, map[string]struct{}{})
+	dfs(src, map[string]struct{}{})
 
-	dfs2(b.src)
+	dfs2(src)
 
-	sourceCode := codes[b.src]
+	sourceCode := codes[src]
 	sourceCode += "//" + strings.Repeat("-", 50) + "以下は生成コード" + strings.Repeat("-", 50)
 	sourceCode += "\n\n"
 	for file, code := range codes {
-		if file == b.src {
+		if file == src {
 			continue
 		}
 		dirs := strings.Split(file, "/")
