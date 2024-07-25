@@ -56,7 +56,7 @@ func (b Bundler) Bundle() (code string, err error) {
 			usedFuncs[f] = struct{}{}
 		}
 
-		importLibs := b.getImportedPackage(node)
+		importLibs := b.getImportedLibPackage(node)
 		visited[file] = struct{}{}
 
 		for _, lib := range importLibs {
@@ -83,7 +83,7 @@ func (b Bundler) Bundle() (code string, err error) {
 			return
 		}
 
-		importLibs := b.getImportedPackage(node)
+		importLibs := b.getImportedLibPackage(node)
 		targetSelectors := map[string]struct{}{}
 		targetImports := map[string]struct{}{}
 		for _, lib := range importLibs {
@@ -158,7 +158,7 @@ func (b Bundler) perseFile(filename string) (*ast.File, error) {
 }
 
 // importされている自作ライブラリのパッケージを取得
-func (b Bundler) getImportedPackage(file *ast.File) []Library {
+func (b Bundler) getImportedLibPackage(file *ast.File) []Library {
 	libs := []Library{}
 
 	for _, imp := range file.Imports {
