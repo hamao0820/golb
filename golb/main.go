@@ -144,6 +144,47 @@ func (b Bundler) Bundle(src string) (code string, err error) {
 	return string(formatted), nil
 }
 
+// 依存するファイルのASTを取得
+func (b Bundler) getDependentFiles(src string) (map[string]*ast.File, error) {
+	files := map[string]*ast.File{}
+
+	// 再帰的に使われている関数を取得
+	var dfs func(string) error
+	dfs = func(filename string) error {
+		if _, ok := files[filename]; ok {
+			return nil
+		}
+
+		node, err := b.perseFile(filename)
+		if err != nil {
+			return err
+		}
+		files[filename] = node
+
+		importLibs := b.getImportedLibPackage(node)
+		for _, lib := range importLibs {
+			libDir := b.getDir(lib.ImportPath)
+			libFiles, err := b.getFiles(libDir)
+			if err != nil {
+				return err
+			}
+			for _, file := range libFiles {
+				libPath := path.Join(libDir, file.Name())
+				if err := dfs(libPath); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+
+	if err := dfs(src); err != nil {
+		return nil, err
+	}
+
+	return files, nil
+}
+
 // ASTを取得
 func (b Bundler) perseFile(filename string) (*ast.File, error) {
 	fset := token.NewFileSet()
