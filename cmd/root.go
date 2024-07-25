@@ -42,11 +42,11 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 
-		if viper.Get("libPackage") != nil {
+		if libPackage == "" && viper.Get("libPackage") != nil {
 			libPackage = viper.Get("libPackage").(string)
 		}
 
-		if viper.Get("rootDir") != nil {
+		if rootDir == "" && viper.Get("rootDir") != nil {
 			rootDir = viper.Get("rootDir").(string)
 		}
 
