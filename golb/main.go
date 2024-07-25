@@ -38,12 +38,44 @@ func NewBundler(src, libPackage, goModDir string) Bundler {
 }
 
 func (b Bundler) Bundle() (code string, err error) {
-	files := map[string]string{} // key: file path, value: 展開コード
+	codes := map[string]string{} // key: file path, value: 展開コード
+	usedFuncs := map[string]struct{}{}
+
+	// 再帰的に使われている関数を取得
+	var dfs func(string, map[string]struct{})
+	dfs = func(file string, visited map[string]struct{}) {
+		if _, ok := visited[file]; ok {
+			return
+		}
+		node, err := b.perseFile(file)
+		if err != nil {
+			return
+		}
+
+		for f := range b.getUsedFunction(node) {
+			usedFuncs[f] = struct{}{}
+		}
+
+		importLibs := b.getImportedPackage(node)
+		visited[file] = struct{}{}
+
+		for _, lib := range importLibs {
+			libDir := b.getDir(lib.ImportPath)
+			libFiles, err := b.getFiles(libDir)
+			if err != nil {
+				panic(err)
+			}
+			for _, file := range libFiles {
+				libPath := path.Join(libDir, file.Name())
+				dfs(libPath, visited)
+			}
+		}
+	}
 
 	// 再帰的にファイルを取得
-	var dfs func(string)
-	dfs = func(file string) {
-		if _, ok := files[file]; ok {
+	var dfs2 func(string)
+	dfs2 = func(file string) {
+		if _, ok := codes[file]; ok {
 			return
 		}
 		node, err := b.perseFile(file)
@@ -64,11 +96,12 @@ func (b Bundler) Bundle() (code string, err error) {
 
 		b.removeSelector(node, targetSelectors)
 		b.removeAllImport(node)
+		b.removeUnusedFunction(node, usedFuncs)
 		code := b.nodeToString(node)
 		if file != b.src {
 			code = strings.Join(strings.Split(code, "\n")[1:], "\n") // package行を削除
 		}
-		files[file] = code
+		codes[file] = code
 
 		for _, lib := range importLibs {
 			libDir := b.getDir(lib.ImportPath)
@@ -78,17 +111,19 @@ func (b Bundler) Bundle() (code string, err error) {
 			}
 			for _, file := range libFiles {
 				libPath := path.Join(libDir, file.Name())
-				dfs(libPath)
+				dfs2(libPath)
 			}
 		}
 	}
 
-	dfs(b.src)
+	dfs(b.src, map[string]struct{}{})
 
-	sourceCode := files[b.src]
-	sourceCode += "/*" + strings.Repeat("-", 50) + "以下は生成コード" + strings.Repeat("-", 50) + "*/"
+	dfs2(b.src)
+
+	sourceCode := codes[b.src]
+	sourceCode += "//" + strings.Repeat("-", 50) + "以下は生成コード" + strings.Repeat("-", 50)
 	sourceCode += "\n\n"
-	for file, code := range files {
+	for file, code := range codes {
 		if file == b.src {
 			continue
 		}
@@ -171,6 +206,26 @@ func (b Bundler) getFiles(dir string) ([]os.DirEntry, error) {
 	return f, nil
 }
 
+// 使用されている関数を取得
+func (b Bundler) getUsedFunction(file *ast.File) map[string]struct{} {
+	usedFuncs := map[string]struct{}{}
+
+	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
+		switch node := cursor.Node().(type) {
+		case *ast.CallExpr:
+			switch fun := node.Fun.(type) {
+			case *ast.Ident:
+				usedFuncs[fun.Name] = struct{}{}
+			case *ast.SelectorExpr:
+				usedFuncs[fun.Sel.Name] = struct{}{}
+			}
+		}
+		return true
+	}, nil)
+
+	return usedFuncs
+}
+
 // ASTを書き換え
 // targetに含まれるselectorを削除する
 // vector.X -> X
@@ -194,6 +249,33 @@ func (b Bundler) removeAllImport(file *ast.File) {
 		switch node := cursor.Node().(type) {
 		case *ast.GenDecl:
 			if node.Tok == token.IMPORT {
+				cursor.Delete()
+			}
+		}
+		return true
+	}, nil)
+}
+
+// ASTを書き換え
+// 使用していない関数宣言を削除する
+func (b Bundler) removeUnusedFunction(file *ast.File, usedFuncs map[string]struct{}) {
+	// 使用していない関数を削除
+	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
+		switch node := cursor.Node().(type) {
+		case *ast.FuncDecl:
+			// main関数は削除しない
+			if node.Name.Name == "main" {
+				return true
+			}
+
+			// methodは削除しない
+			// func (v Vector) Add(v2 Vector) Vector {}
+			if node.Recv != nil {
+				fmt.Println(node.Name.Name, node.Recv)
+				return true
+			}
+
+			if _, ok := usedFuncs[node.Name.Name]; !ok {
 				cursor.Delete()
 			}
 		}
