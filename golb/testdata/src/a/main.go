@@ -10,8 +10,8 @@ import (
 func main() {
 	v1 := vc.NewVector(1, 2)
 	v2 := vc.NewVector(3, 4)
-	v3 := v1.Add(v2)
-	v3.Scale(2)
+	v3 := v1.Add(v2) // v3 = v1 + v2
+	// v3.Scale(2)
 
 	fmt.Println(v3.X, v3.Y)
 	fmt.Println(sample.Sample(1, 2))
@@ -20,4 +20,8 @@ func main() {
 
 func hello() {
 	fmt.Println("hello")
+}
+
+func unused() {
+	fmt.Println("unused")
 }

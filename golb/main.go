@@ -59,6 +59,9 @@ func (b Bundler) Bundle() (code string, err error) {
 			targetImports[lib.ImportPath] = struct{}{}
 		}
 
+		// コメントを削除
+		node.Comments = nil
+
 		b.removeSelector(node, targetSelectors)
 		b.removeAllImport(node)
 		code := b.nodeToString(node)
