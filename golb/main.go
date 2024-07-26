@@ -36,38 +36,16 @@ func NewBundler(libPackage, goModDir string) Bundler {
 }
 
 func (b Bundler) Bundle(src string) (code string, err error) {
-	codes := map[string]string{} // key: file path, value: 展開コード
-	usedFuncs := map[string]struct{}{}
+	codes := map[string]string{}
 
-	// 再帰的に使われている関数を取得
-	var dfs func(string, map[string]struct{})
-	dfs = func(file string, visited map[string]struct{}) {
-		if _, ok := visited[file]; ok {
-			return
-		}
-		node, err := b.perseFile(file)
-		if err != nil {
-			return
-		}
+	files, err := b.getDependentFiles(src)
+	if err != nil {
+		return "", err
+	}
 
-		for f := range b.getUsedFunction(node) {
-			usedFuncs[f] = struct{}{}
-		}
-
-		importLibs := b.getImportedLibPackage(node)
-		visited[file] = struct{}{}
-
-		for _, lib := range importLibs {
-			libDir := b.getDir(lib.ImportPath)
-			libFiles, err := b.getFiles(libDir)
-			if err != nil {
-				panic(err)
-			}
-			for _, file := range libFiles {
-				libPath := path.Join(libDir, file.Name())
-				dfs(libPath, visited)
-			}
-		}
+	usedFuncs, err := b.getUsedFunctions(files)
+	if err != nil {
+		return "", err
 	}
 
 	// 再帰的にファイルを取得
@@ -113,8 +91,6 @@ func (b Bundler) Bundle(src string) (code string, err error) {
 			}
 		}
 	}
-
-	dfs(src, map[string]struct{}{})
 
 	dfs2(src)
 
@@ -246,23 +222,25 @@ func (b Bundler) getFiles(dir string) ([]os.DirEntry, error) {
 }
 
 // 使用されている関数を取得
-func (b Bundler) getUsedFunction(file *ast.File) map[string]struct{} {
+func (b Bundler) getUsedFunctions(files map[string]*ast.File) (map[string]struct{}, error) {
 	usedFuncs := map[string]struct{}{}
 
-	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
-		switch node := cursor.Node().(type) {
-		case *ast.CallExpr:
-			switch fun := node.Fun.(type) {
-			case *ast.Ident:
-				usedFuncs[fun.Name] = struct{}{}
-			case *ast.SelectorExpr:
-				usedFuncs[fun.Sel.Name] = struct{}{}
+	for _, file := range files {
+		astutil.Apply(file, func(cursor *astutil.Cursor) bool {
+			switch node := cursor.Node().(type) {
+			case *ast.CallExpr:
+				switch fun := node.Fun.(type) {
+				case *ast.Ident:
+					usedFuncs[fun.Name] = struct{}{}
+				case *ast.SelectorExpr:
+					usedFuncs[fun.Sel.Name] = struct{}{}
+				}
 			}
-		}
-		return true
-	}, nil)
+			return true
+		}, nil)
+	}
 
-	return usedFuncs
+	return usedFuncs, nil
 }
 
 // ASTを書き換え
