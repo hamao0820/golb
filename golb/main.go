@@ -167,24 +167,62 @@ func (b Bundler) getFiles(dir string) ([]string, error) {
 	return files, nil
 }
 
+// 関数宣言の中で呼び出されている関数を取得
+func collectFuncsInFuncDecl(funcDecl *ast.FuncDecl) []string {
+	var funcs []string
+
+	astutil.Apply(funcDecl.Body, nil, func(c *astutil.Cursor) bool {
+		switch node := c.Node().(type) {
+		case *ast.CallExpr:
+			switch fun := node.Fun.(type) {
+			case *ast.Ident:
+				funcs = append(funcs, fun.Name)
+			case *ast.SelectorExpr:
+				funcs = append(funcs, fun.Sel.Name)
+			}
+		}
+		return true
+	})
+
+	return funcs
+}
+
 // 使用されている関数を取得
 func (b Bundler) getUsedFunctions(files map[string]*ast.File) (map[string]struct{}, error) {
-	usedFuncs := map[string]struct{}{}
+	dependencyGraph := map[string]map[string]struct{}{}
 
 	for _, file := range files {
 		astutil.Apply(file, func(cursor *astutil.Cursor) bool {
 			switch node := cursor.Node().(type) {
-			case *ast.CallExpr:
-				switch fun := node.Fun.(type) {
-				case *ast.Ident:
-					usedFuncs[fun.Name] = struct{}{}
-				case *ast.SelectorExpr:
-					usedFuncs[fun.Sel.Name] = struct{}{}
+			case *ast.FuncDecl:
+				funcs := collectFuncsInFuncDecl(node)
+				for _, f := range funcs {
+					if _, ok := dependencyGraph[node.Name.Name]; !ok {
+						dependencyGraph[node.Name.Name] = map[string]struct{}{}
+					}
+					dependencyGraph[node.Name.Name][f] = struct{}{}
 				}
+				return true
 			}
 			return true
 		}, nil)
 	}
+
+	// 再帰的に使われている関数を取得
+	usedFuncs := map[string]struct{}{}
+	var dfs func(string)
+	dfs = func(funcName string) {
+		if _, ok := usedFuncs[funcName]; ok {
+			return
+		}
+		usedFuncs[funcName] = struct{}{}
+		for f := range dependencyGraph[funcName] {
+			dfs(f)
+		}
+	}
+
+	// main関数から再帰的に使われている関数を取得
+	dfs("main")
 
 	return usedFuncs, nil
 }
