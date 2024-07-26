@@ -47,30 +47,9 @@ func (b Bundler) Bundle(src string) (code string, err error) {
 		return "", err
 	}
 
-	codes, err := b.convertToCode(src, files, usedFuncs)
-	if err != nil {
-		return "", err
-	}
+	b.cleanFiles(files, usedFuncs)
 
-	sourceCode := codes[src]
-	sourceCode += "/*" + strings.Repeat("-", 50) + "以下は生成コード" + strings.Repeat("-", 50) + "*/"
-	sourceCode += "\n\n"
-	for file, code := range codes {
-		if file == src {
-			continue
-		}
-		libRelPath := strings.Join(strings.Split(strings.TrimPrefix(file, b.rootDir+"/"), "/")[1:], "/")
-		sourceCode += "// " + libRelPath
-		sourceCode += code
-		sourceCode += "\n\n"
-	}
-
-	formatted, err := imports.Process("", []byte(sourceCode), nil)
-	if err != nil {
-		return "", err
-	}
-
-	formatted, err = format.Source(formatted)
+	formatted, err := b.convertToCode(src, files)
 	if err != nil {
 		return "", err
 	}
@@ -211,11 +190,12 @@ func (b Bundler) getUsedFunctions(files map[string]*ast.File) (map[string]struct
 }
 
 // filesのASTを変更
-// 統合のための文字列に変換
-func (b Bundler) convertToCode(src string, files map[string]*ast.File, usedFunc map[string]struct{}) (map[string]string, error) {
-	codes := map[string]string{}
-
-	for file, node := range files {
+// 1. コメントを削除
+// 2. import宣言を削除
+// 3. selectorを削除
+// 4. 使用していない関数を削除
+func (b Bundler) cleanFiles(files map[string]*ast.File, usedFunc map[string]struct{}) {
+	for _, node := range files {
 		importLibs := b.getImportedLibPackage(node)
 		targetSelectors := map[string]struct{}{}
 		targetImports := map[string]struct{}{}
@@ -230,14 +210,38 @@ func (b Bundler) convertToCode(src string, files map[string]*ast.File, usedFunc 
 		b.removeSelector(node, targetSelectors)
 		b.removeAllImport(node)
 		b.removeUnusedFunction(node, usedFunc)
-		code := b.nodeToString(node)
-		if file != src {
-			code = strings.Join(strings.Split(code, "\n")[1:], "\n") // package行を削除
+	}
+}
+
+// ASTをコードに変換
+func (b Bundler) convertToCode(src string, files map[string]*ast.File) (string, error) {
+	sourceCode := b.nodeToString(files[src])
+	sourceCode += "/*" + strings.Repeat("-", 50) + "以下は生成コード" + strings.Repeat("-", 50) + "*/"
+	sourceCode += "\n\n"
+
+	for n, f := range files {
+		if n == src {
+			continue
 		}
-		codes[file] = code
+		code := b.nodeToString(f)
+		code = strings.Join(strings.Split(code, "\n")[1:], "\n") // package宣言を削除
+		libRelPath := strings.Join(strings.Split(strings.TrimPrefix(n, b.rootDir+"/"), "/")[1:], "/")
+		sourceCode += "// " + libRelPath
+		sourceCode += code
+		sourceCode += "\n\n"
 	}
 
-	return codes, nil
+	formatted, err := imports.Process("", []byte(sourceCode), nil)
+	if err != nil {
+		return "", err
+	}
+
+	formatted, err = format.Source(formatted)
+	if err != nil {
+		return "", err
+	}
+
+	return string(formatted), nil
 }
 
 // ASTを書き換え
