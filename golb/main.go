@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
@@ -257,13 +258,22 @@ func (b Bundler) convertToCode(src string, files map[string]*ast.File) (string, 
 	sourceCode += "/*" + strings.Repeat("-", 50) + "以下は生成コード" + strings.Repeat("-", 50) + "*/"
 	sourceCode += "\n\n"
 
-	for n, f := range files {
-		if n == src {
+	keys := []string{}
+	for k := range files {
+		if k == src {
 			continue
 		}
-		code := b.nodeToString(f)
+		keys = append(keys, k)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+
+	for _, k := range keys {
+		code := b.nodeToString(files[k])
 		code = strings.Join(strings.Split(code, "\n")[1:], "\n") // package宣言を削除
-		libRelPath := strings.Join(strings.Split(strings.TrimPrefix(n, b.rootDir+"/"), "/")[1:], "/")
+		libRelPath := strings.Join(strings.Split(strings.TrimPrefix(k, b.rootDir+"/"), "/")[1:], "/")
 		sourceCode += "// " + libRelPath
 		sourceCode += code
 		sourceCode += "\n\n"
