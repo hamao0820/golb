@@ -11,6 +11,7 @@ import (
 	"go/token"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
@@ -102,8 +103,7 @@ func (b Bundler) getDependentFiles(src string) (map[string]*ast.File, error) {
 				return err
 			}
 			for _, file := range libFiles {
-				libPath := path.Join(libDir, file.Name())
-				if err := dfs(libPath); err != nil {
+				if err := dfs(file); err != nil {
 					return err
 				}
 			}
@@ -168,14 +168,24 @@ func (b Bundler) getDir(value string) string {
 	return path.Join(b.rootDir, strings.TrimPrefix(strings.Trim(value, "\""), b.libPackage))
 }
 
-// ディレクトリ内のファイルを取得
-func (b Bundler) getFiles(dir string) ([]os.DirEntry, error) {
-	f, err := os.ReadDir(dir)
+// ディレクトリ以下にあるファイルを再帰的に取得
+func (b Bundler) getFiles(dir string) ([]string, error) {
+	files := []string{}
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			files = append(files, path)
+		}
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	return f, nil
+	return files, nil
 }
 
 // 使用されている関数を取得

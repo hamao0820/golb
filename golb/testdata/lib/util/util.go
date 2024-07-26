@@ -13,3 +13,17 @@ func Max(x, y int) int {
 	}
 	return y
 }
+
+func YesNo(b bool) string {
+	if b {
+		return Yes
+	}
+	return No
+}
+
+func YESNO(b bool) string {
+	if b {
+		return YES
+	}
+	return NO
+}

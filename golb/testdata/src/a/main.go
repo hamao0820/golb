@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hamao0820/ac-library-go/lib/sample"
+	"github.com/hamao0820/ac-library-go/lib/sample/nested"
 	vc "github.com/hamao0820/ac-library-go/lib/vector"
 )
 
@@ -15,6 +16,7 @@ func main() {
 
 	fmt.Println(v3.X, v3.Y)
 	fmt.Println(sample.Sample(1, 2))
+	fmt.Println(nested.Nested())
 	hello()
 }
 
