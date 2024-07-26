@@ -273,6 +273,9 @@ func (b Bundler) convertToCode(src string, files map[string]*ast.File) (string, 
 	for _, k := range keys {
 		code := b.nodeToString(files[k])
 		code = strings.Join(strings.Split(code, "\n")[1:], "\n") // package宣言を削除
+		if code == "" {
+			continue
+		}
 		libRelPath := strings.Join(strings.Split(strings.TrimPrefix(k, b.rootDir+"/"), "/")[1:], "/")
 		sourceCode += "// " + libRelPath
 		sourceCode += code
