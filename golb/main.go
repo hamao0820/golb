@@ -53,14 +53,14 @@ func (b Bundler) Bundle(src string) (code string, err error) {
 	}
 
 	sourceCode := codes[src]
-	sourceCode += "//" + strings.Repeat("-", 50) + "以下は生成コード" + strings.Repeat("-", 50)
+	sourceCode += "/*" + strings.Repeat("-", 50) + "以下は生成コード" + strings.Repeat("-", 50) + "*/"
 	sourceCode += "\n\n"
 	for file, code := range codes {
 		if file == src {
 			continue
 		}
-		dirs := strings.Split(file, "/")
-		sourceCode += "// " + path.Join(dirs[len(dirs)-2:]...)
+		libRelPath := strings.Join(strings.Split(strings.TrimPrefix(file, b.rootDir+"/"), "/")[1:], "/")
+		sourceCode += "// " + libRelPath
 		sourceCode += code
 		sourceCode += "\n\n"
 	}
