@@ -36,8 +36,6 @@ func NewBundler(libPackage, goModDir string) Bundler {
 }
 
 func (b Bundler) Bundle(src string) (code string, err error) {
-	codes := map[string]string{}
-
 	files, err := b.getDependentFiles(src)
 	if err != nil {
 		return "", err
@@ -48,51 +46,10 @@ func (b Bundler) Bundle(src string) (code string, err error) {
 		return "", err
 	}
 
-	// 再帰的にファイルを取得
-	var dfs2 func(string)
-	dfs2 = func(file string) {
-		if _, ok := codes[file]; ok {
-			return
-		}
-		node, err := b.perseFile(file)
-		if err != nil {
-			return
-		}
-
-		importLibs := b.getImportedLibPackage(node)
-		targetSelectors := map[string]struct{}{}
-		targetImports := map[string]struct{}{}
-		for _, lib := range importLibs {
-			targetSelectors[lib.SelectorName] = struct{}{}
-			targetImports[lib.ImportPath] = struct{}{}
-		}
-
-		// コメントを削除
-		node.Comments = nil
-
-		b.removeSelector(node, targetSelectors)
-		b.removeAllImport(node)
-		b.removeUnusedFunction(node, usedFuncs)
-		code := b.nodeToString(node)
-		if file != src {
-			code = strings.Join(strings.Split(code, "\n")[1:], "\n") // package行を削除
-		}
-		codes[file] = code
-
-		for _, lib := range importLibs {
-			libDir := b.getDir(lib.ImportPath)
-			libFiles, err := b.getFiles(libDir)
-			if err != nil {
-				panic(err)
-			}
-			for _, file := range libFiles {
-				libPath := path.Join(libDir, file.Name())
-				dfs2(libPath)
-			}
-		}
+	codes, err := b.convertToCode(src, files, usedFuncs)
+	if err != nil {
+		return "", err
 	}
-
-	dfs2(src)
 
 	sourceCode := codes[src]
 	sourceCode += "//" + strings.Repeat("-", 50) + "以下は生成コード" + strings.Repeat("-", 50)
@@ -241,6 +198,36 @@ func (b Bundler) getUsedFunctions(files map[string]*ast.File) (map[string]struct
 	}
 
 	return usedFuncs, nil
+}
+
+// filesのASTを変更
+// 統合のための文字列に変換
+func (b Bundler) convertToCode(src string, files map[string]*ast.File, usedFunc map[string]struct{}) (map[string]string, error) {
+	codes := map[string]string{}
+
+	for file, node := range files {
+		importLibs := b.getImportedLibPackage(node)
+		targetSelectors := map[string]struct{}{}
+		targetImports := map[string]struct{}{}
+		for _, lib := range importLibs {
+			targetSelectors[lib.SelectorName] = struct{}{}
+			targetImports[lib.ImportPath] = struct{}{}
+		}
+
+		// コメントを削除
+		node.Comments = nil
+
+		b.removeSelector(node, targetSelectors)
+		b.removeAllImport(node)
+		b.removeUnusedFunction(node, usedFunc)
+		code := b.nodeToString(node)
+		if file != src {
+			code = strings.Join(strings.Split(code, "\n")[1:], "\n") // package行を削除
+		}
+		codes[file] = code
+	}
+
+	return codes, nil
 }
 
 // ASTを書き換え
