@@ -15,8 +15,13 @@ var configFilePath string
 // configCmd represents the config command
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "",
-	Long:  "",
+	Short: "config command",
+	Long: `This command sets the configuration file and shows the current configuration.
+The configuration file is stored in $HOME/.golb/config.json.
+You can set the library package and the root directory.
+- lib (l): target library package
+- root (r): root directory(absolute path of go.mod)`,
+
 	RunE: func(cmd *cobra.Command, args []string) error {
 		viper.SetConfigFile(configFilePath)
 		viper.SetConfigType("json")

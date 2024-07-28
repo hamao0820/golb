@@ -33,8 +33,11 @@ func init() {
 
 var rootCmd = &cobra.Command{
 	Use:   "golb",
-	Short: "",
-	Long:  "",
+	Short: "golb is a tool for bundling go source code",
+	Long: `This tool bundles go source code into a single file.
+You can specify the target library package and the root directory.
+- lib (l): target library package
+- root (r): root directory(absolute path of go.mod)`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		viper.SetConfigFile(configFilePath)
 		viper.SetConfigType("json")

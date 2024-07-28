@@ -14,8 +14,8 @@ import (
 // initCmd represents the init command
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "",
-	Long:  ``,
+	Short: "initial command",
+	Long:  `This command initializes the configuration file. The configuration file is stored in $HOME/.golb/config.json.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		home, err := os.UserHomeDir()
 		if err != nil {
