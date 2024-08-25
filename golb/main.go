@@ -302,8 +302,17 @@ func (b Bundler) removeSelector(file *ast.File, targets map[string]struct{}) {
 	astutil.Apply(file, func(cursor *astutil.Cursor) bool {
 		switch node := cursor.Node().(type) {
 		case *ast.SelectorExpr:
-			if _, ok := targets[node.X.(*ast.Ident).Name]; ok {
-				cursor.Replace(node.Sel)
+			switch x := node.X.(type) {
+			case *ast.Ident:
+				if _, ok := targets[x.Name]; ok {
+					cursor.Replace(node.Sel)
+				}
+			case *ast.IndexExpr:
+				if ident, ok := x.X.(*ast.Ident); ok {
+					if _, ok := targets[ident.Name]; ok {
+						cursor.Replace(node.Sel)
+					}
+				}
 			}
 		}
 		return true
