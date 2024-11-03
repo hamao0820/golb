@@ -5,10 +5,11 @@ package cmd
 
 import (
 	"errors"
-	"golb/golb"
+
 	"os"
 	"path/filepath"
 
+	"github.com/hamao0820/golb/golb"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

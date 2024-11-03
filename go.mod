@@ -1,4 +1,4 @@
-module golb
+module github.com/hamao0820/golb
 
 go 1.21.5
 
